@@ -4,7 +4,7 @@ import time
 
 def setup_mlflow():
     mlflow.set_tracking_uri("./mlruns")
-    mlflow.set_experiment("Certified_Unlearning_MNIST")
+    mlflow.set_experiment("Unlearning_CBMS")
 
     ui_url = "http://localhost:5000"
     print(f"\n✓ MLflow tracking URI: ./mlruns", flush=True)

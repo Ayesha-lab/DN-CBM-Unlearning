@@ -1,0 +1,14 @@
+artifact_uri: /home/exml_team004/DN-CBM-Unlearning/mlruns/759962845068623722/2c2747069c724feb8638e68cc91815aa/artifacts
+end_time: null
+entry_point_name: ''
+experiment_id: '759962845068623722'
+lifecycle_stage: active
+run_id: 2c2747069c724feb8638e68cc91815aa
+run_name: lr_0.05_epochs_20_bs_128
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1771366589504
+status: 1
+tags: []
+user_id: exml_team004
