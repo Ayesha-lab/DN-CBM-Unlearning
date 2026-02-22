@@ -66,8 +66,8 @@ def load_sae_and_concept_names(
     
     # Get top concept names
     top_indices = similarity_matrix.argmax(dim=0)  # [n_concepts]
-    concept_names = [vocab_words[idx] for idx in top_indices]
-    similarities = similarity_matrix.max(dim=1).values  # [n_concepts]
+    concept_names = [vocab_words[int(idx)] for idx in top_indices]
+    similarities = similarity_matrix.max(dim=0).values  # [n_concepts] - use dim=0, not dim=1
     
     return concept_names, similarities.cpu().numpy(), similarity_matrix.cpu().numpy()
 
