@@ -1,4 +1,5 @@
-./junk
-./data
-./checkpoints
+junk
+data
 *.png
+sparse_autoencoder
+__pycache__/

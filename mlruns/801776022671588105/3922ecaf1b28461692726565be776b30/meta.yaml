@@ -1,0 +1,14 @@
+artifact_uri: file:///home/exml_team004/DN-CBM-Unlearning/mlruns/801776022671588105/3922ecaf1b28461692726565be776b30/artifacts
+end_time: 1771787323410
+entry_point_name: ''
+experiment_id: '801776022671588105'
+lifecycle_stage: active
+run_id: 3922ecaf1b28461692726565be776b30
+run_name: probe_Blond_Hair_l1_0.0
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1771787262129
+status: 4
+tags: []
+user_id: exml_team004

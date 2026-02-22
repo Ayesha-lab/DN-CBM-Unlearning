@@ -1,0 +1,7 @@
+artifact_location: file:///home/exml_team004/DN-CBM-Unlearning/mlruns/801776022671588105
+creation_time: 1771786424154
+experiment_id: '801776022671588105'
+last_update_time: 1771786424154
+lifecycle_stage: active
+name: linear_probe_celeba0
+workspace: default
