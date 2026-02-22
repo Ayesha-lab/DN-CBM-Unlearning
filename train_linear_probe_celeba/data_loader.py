@@ -41,7 +41,16 @@ def load_celeba_labels(celeba_root, split='train', attribute='Blond_Hair'):
     # Load partition file to get split indices
     partition_file = osp.join(celeba_root, 'list_eval_partition.txt')
     with open(partition_file, 'r') as f:
-        partitions = [int(line.strip()) for line in f.readlines()]
+        partitions = []
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            parts = line.split()
+            # CelebA commonly stores: "<filename> <partition>"
+            # Some variants store just: "<partition>"
+            part = parts[-1]
+            partitions.append(int(part))
     
     # Map split to partition number
     split_to_partition = {'train': 0, 'val': 1, 'test': 2}
@@ -87,7 +96,9 @@ def get_concept_strengths_loader(
     """
     
     print(f"→ Loading concept strengths from: {activations_path}")
-    concepts = torch.load(activations_path, map_location=device)
+    concepts = torch.load(activations_path, map_location="cpu")
+    if concepts.ndim == 3 and concepts.shape[1] == 1:
+        concepts = concepts.squeeze(1)  # [N, 8192]
     print(f"✓ Concepts shape: {concepts.shape}")
     
     print(f"→ Loading CelebA labels for '{attribute}' attribute from: {celeba_root}")
@@ -104,7 +115,7 @@ def get_concept_strengths_loader(
         dataset,
         batch_size=batch_size,
         shuffle=shuffle,
-        pin_memory=True if device == 'cuda' else False
+        pin_memory=True if device == 'cuda' else False  # now valid, because tensors are CPU
     )
     
     print(f"✓ Created loader with {len(dataset)} samples\n")
