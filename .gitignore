@@ -3,3 +3,8 @@ data
 *.png
 sparse_autoencoder
 __pycache__/
+train_linear_probe_celeba/__pycache__/
+train_linear_probe_celeba/outputs/
+mlruns/
+Datasets/
+mlruns.db

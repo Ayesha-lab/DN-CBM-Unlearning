@@ -17,7 +17,11 @@ probe_dataset_root_dir_dict = {
     "imagenet": "/path/to/dataset/",
     "cifar10": "/path/to/dataset/",
     "cifar100": "/path/to/dataset/",
+    "celeba": "./data/celeba",  
 }
 
 probe_dataset_nclasses_dict = {"places365": 365,
-                               'imagenet': 1000, "cifar10": 10, "cifar100": 100, }
+                               'imagenet': 1000, 
+                               "cifar10": 10, 
+                               "cifar100": 100,
+                               "celeba": 2, }
