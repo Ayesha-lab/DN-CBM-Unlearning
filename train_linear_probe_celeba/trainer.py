@@ -13,23 +13,14 @@ class BinaryProbeTrainer:
     """
 
     def __init__(
-        self,
-        model,
-        device: str = "cuda",
-        learning_rate: float = 1e-3,
-        l1_coeff: float = 0.0,
-        mlflow_logger=None,
-        sparsity_eps: float = 1e-6,
+            self,
+            model,
+            device: str = "cuda",
+            learning_rate: float = 1e-3,
+            l1_coeff: float = 0.0,
+            mlflow_logger=None,
+            sparsity_eps: float = 1e-6,
     ):
-        """
-        Args:
-            model: Binary linear probe model
-            device: Device to train on
-            learning_rate: Learning rate for optimizer
-            l1_coeff: L1 sparsity coefficient
-            mlflow_logger: MLflowLogger from mlflow_utils (or None)
-            sparsity_eps: Threshold for counting non-zero weights in sparsity metrics
-        """
         self.model = model
         self.device = device
         self.learning_rate = learning_rate
@@ -53,149 +44,132 @@ class BinaryProbeTrainer:
 
     @torch.no_grad()
     def _weight_sparsity_metrics(self):
-        """
-        Sparsity metrics for the probe weights.
-        Uses the linear layer weight: shape [1, n_concepts] (or [n_concepts]).
-        """
         w = self.model.linear.weight.detach()
         w_abs = w.abs()
-
         nnz = (w_abs > self.sparsity_eps).sum().item()
         total = w.numel()
-        nnz_frac = float(nnz) / float(total) if total > 0 else 0.0
-
-        l1 = w_abs.sum().item()
-        l2 = (w ** 2).sum().sqrt().item()
-
         return {
-            "probe/weight_nnz": float(nnz),
-            "probe/weight_nnz_frac": float(nnz_frac),
-            "probe/weight_l1": float(l1),
-            "probe/weight_l2": float(l2),
+            "probe/weight_nnz":      float(nnz),
+            "probe/weight_nnz_frac": float(nnz / total) if total > 0 else 0.0,
+            "probe/weight_l1":       float(w_abs.sum().item()),
+            "probe/weight_l2":       float((w ** 2).sum().sqrt().item()),
         }
 
-    def train_epoch(self, train_loader):
-        """
-        Train for one epoch.
+    def _binary_metrics(self, all_preds, all_labels):
+        """Compute acc, balanced acc, TPR, TNR from accumulated tensors."""
+        correct = (all_preds == all_labels).sum().item()
+        total   = all_labels.shape[0]
+        acc     = correct / max(1, total)
 
-        Returns:
-            dict of averaged metrics for the epoch
-        """
+        pos_mask = (all_labels == 1)
+        neg_mask = (all_labels == 0)
+        tpr = (all_preds[pos_mask] == 1).sum().item() / max(1, pos_mask.sum().item())
+        tnr = (all_preds[neg_mask] == 0).sum().item() / max(1, neg_mask.sum().item())
+        bal_acc = (tpr + tnr) / 2.0
+
+        return float(acc), float(bal_acc), float(tpr), float(tnr)
+
+    def train_epoch(self, train_loader):
         self.model.train()
         total_loss = 0.0
-        total_ce = 0.0
-        total_correct = 0
-        total_samples = 0
+        total_ce   = 0.0
         total_batches = 0
+        all_preds  = []
+        all_labels = []
 
         for batch_X, batch_y in tqdm(train_loader, desc="Training"):
             total_batches += 1
-
             batch_X = batch_X.to(self.device)
             batch_y = batch_y.float().unsqueeze(1).to(self.device)
 
             self.optimizer.zero_grad()
-            logits = self.model(batch_X)
-
+            logits  = self.model(batch_X)
             ce_loss = self.criterion(logits, batch_y)
             l1_loss = self._compute_l1_loss() if self.l1_coeff > 0 else 0.0
-            loss = ce_loss + self.l1_coeff * l1_loss
-
+            loss    = ce_loss + self.l1_coeff * l1_loss
             loss.backward()
             self.optimizer.step()
 
             total_loss += float(loss.item())
-            total_ce += float(ce_loss.item())
+            total_ce   += float(ce_loss.item())
+            all_preds.append((logits > 0).long().squeeze(1).cpu())
+            all_labels.append(batch_y.long().squeeze(1).cpu())
 
-            preds = (logits > 0).long()
-            total_correct += (preds == batch_y.long()).sum().item()
-            total_samples += batch_y.shape[0]
+        all_preds  = torch.cat(all_preds)
+        all_labels = torch.cat(all_labels)
+        acc, bal_acc, tpr, tnr = self._binary_metrics(all_preds, all_labels)
 
         avg_loss = total_loss / max(1, total_batches)
-        avg_ce = total_ce / max(1, total_batches)
-        acc = total_correct / max(1, total_samples)
-
         self.train_losses.append(avg_loss)
 
         return {
             "train/loss_total": float(avg_loss),
-            "train/loss_ce": float(avg_ce),
-            "train/acc_top1": float(acc),
+            "train/loss_ce":    float(total_ce / max(1, total_batches)),
+            "train/acc":        acc,
+            "train/bal_acc":    bal_acc,
+            "train/tpr":        tpr,
+            "train/tnr":        tnr,
         }
 
     @torch.no_grad()
     def evaluate(self, loader, split_name: str = "val"):
-        """
-        Evaluate on a loader.
-
-        Returns:
-            dict of averaged metrics
-        """
         self.model.eval()
         total_loss = 0.0
-        total_ce = 0.0
-        total_correct = 0
-        total_samples = 0
+        total_ce   = 0.0
         total_batches = 0
+        all_preds  = []
+        all_labels = []
 
         for batch_X, batch_y in tqdm(loader, desc=f"Evaluating ({split_name})"):
             total_batches += 1
-
             batch_X = batch_X.to(self.device)
             batch_y = batch_y.float().unsqueeze(1).to(self.device)
 
-            logits = self.model(batch_X)
-
+            logits  = self.model(batch_X)
             ce_loss = self.criterion(logits, batch_y)
             l1_loss = self._compute_l1_loss() if self.l1_coeff > 0 else 0.0
-            loss = ce_loss + self.l1_coeff * l1_loss
+            loss    = ce_loss + self.l1_coeff * l1_loss
 
             total_loss += float(loss.item())
-            total_ce += float(ce_loss.item())
+            total_ce   += float(ce_loss.item())
+            all_preds.append((logits > 0).long().squeeze(1).cpu())
+            all_labels.append(batch_y.long().squeeze(1).cpu())
 
-            preds = (logits > 0).long()
-            total_correct += (preds == batch_y.long()).sum().item()
-            total_samples += batch_y.shape[0]
+        all_preds  = torch.cat(all_preds)
+        all_labels = torch.cat(all_labels)
+        acc, bal_acc, tpr, tnr = self._binary_metrics(all_preds, all_labels)
 
         avg_loss = total_loss / max(1, total_batches)
-        avg_ce = total_ce / max(1, total_batches)
-        acc = total_correct / max(1, total_samples)
 
         if split_name == "val":
             self.val_losses.append(avg_loss)
-            self.val_accs.append(acc)
+            self.val_accs.append(bal_acc)
 
         return {
             f"{split_name}/loss_total": float(avg_loss),
-            f"{split_name}/loss_ce": float(avg_ce),
-            f"{split_name}/acc_top1": float(acc),
+            f"{split_name}/loss_ce":    float(total_ce / max(1, total_batches)),
+            f"{split_name}/acc":        acc,
+            f"{split_name}/bal_acc":    bal_acc,
+            f"{split_name}/tpr":        tpr,
+            f"{split_name}/tnr":        tnr,
         }
 
     def train(self, train_loader, val_loader, num_epochs: int = 50, val_freq: int = 5):
-        """
-        Train for multiple epochs.
-
-        Args:
-            train_loader: Training data loader
-            val_loader: Validation data loader
-            num_epochs: Number of epochs to train
-            val_freq: Validation frequency (every N epochs)
-        """
-        best_val_acc = 0.0
+        best_val_bal_acc = 0.0
         best_epoch = 0
 
         for epoch in range(num_epochs):
-            train_metrics = self.train_epoch(train_loader)
+            train_metrics   = self.train_epoch(train_loader)
             sparsity_metrics = self._weight_sparsity_metrics()
 
-            # log train + sparsity each epoch
             if self.mlflow_logger is not None:
                 self.mlflow_logger.log_metrics({**train_metrics, **sparsity_metrics}, step=epoch)
 
             msg = (
                 f"Epoch {epoch+1}/{num_epochs} | "
                 f"Train Loss: {train_metrics['train/loss_total']:.6f} | "
-                f"Train Acc: {train_metrics['train/acc_top1']:.4f}"
+                f"Train Acc: {train_metrics['train/acc']:.4f} | "
+                f"Train BalAcc: {train_metrics['train/bal_acc']:.4f}"
             )
 
             if (epoch + 1) % val_freq == 0:
@@ -206,22 +180,23 @@ class BinaryProbeTrainer:
 
                 msg += (
                     f" | Val Loss: {val_metrics['val/loss_total']:.6f} | "
-                    f"Val Acc: {val_metrics['val/acc_top1']:.4f}"
+                    f"Val Acc: {val_metrics['val/acc']:.4f} | "
+                    f"Val BalAcc: {val_metrics['val/bal_acc']:.4f}"
                 )
 
-                if val_metrics["val/acc_top1"] > best_val_acc:
-                    best_val_acc = val_metrics["val/acc_top1"]
+                if val_metrics["val/bal_acc"] > best_val_bal_acc:
+                    best_val_bal_acc = val_metrics["val/bal_acc"]
                     best_epoch = epoch + 1
 
             print(msg)
 
         print(f"\n✓ Training complete!")
-        print(f"✓ Best validation accuracy: {best_val_acc:.4f} at epoch {best_epoch}")
+        print(f"✓ Best val balanced accuracy: {best_val_bal_acc:.4f} at epoch {best_epoch}")
 
         if self.mlflow_logger is not None:
-            self.mlflow_logger.log_metric("val/best_acc_top1", float(best_val_acc))
+            self.mlflow_logger.log_metric("val/best_bal_acc", float(best_val_bal_acc))
 
-        return best_val_acc
+        return best_val_bal_acc
 
     def get_model_weights(self):
         """Get model weights for interpretation."""

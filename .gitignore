@@ -8,3 +8,8 @@ train_linear_probe_celeba/outputs/
 mlruns/
 Datasets/
 mlruns.db
+outputs_top1
+SAE/
+mlflow.db
+uv.lock
+.idea/

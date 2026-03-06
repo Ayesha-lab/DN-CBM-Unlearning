@@ -25,8 +25,11 @@ def get_args() -> argparse.Namespace:
 
     # Output
     parser.add_argument("--output_dir", type=str, default="./train_linear_probe_celeba/outputs")
+    parser.add_argument("--concept_names_path", type=str,                          # ← NEW
+                        default="./checkpoints/clip_RN50_concept_name.csv",
+                        help="Path to CSV with columns: concept_idx, name, similarity")
 
-    # MLflow
+                    # MLflow
     parser.add_argument("--use_mlflow", action="store_true")
     parser.add_argument("--mlflow_tracking_uri", type=str, default="file:./mlruns")
     parser.add_argument("--mlflow_experiment", type=str, default="linear_probe_celeba")

@@ -256,7 +256,7 @@ def main():
     output_dir = osp.join(
         args.data_dir_root,
         'activations_img',
-        'celeba',
+        'data/activations_img/celeba',
         args.img_enc_name_for_saving,
         args.hook_points[0],
         args.split
