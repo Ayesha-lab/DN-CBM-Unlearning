@@ -62,8 +62,7 @@ def load_celeba_labels(celeba_root, split='train', attribute='Blond_Hair'):
         if partition == target_partition:
             # Parse attribute line
             attr_line = lines[2 + img_idx].strip().split()
-            attr_val = int(attr_line[attr_idx])
-            # Convert -1 to 0 (CelebA format)
+            attr_val = int(attr_line[attr_idx + 1])   # ← +1 to skip filename
             label = 1 if attr_val == 1 else 0
             labels.append(label)
     
