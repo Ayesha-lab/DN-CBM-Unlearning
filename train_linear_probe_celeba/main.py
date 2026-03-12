@@ -226,8 +226,8 @@ def main():
 
         # MLflow artifacts
         mlf.log_artifact(checkpoint_path,   artifact_path="checkpoints")
-        mlf.log_artifact(top_concepts_path, artifact_path="analysis")
-        mlf.log_artifact(all_ranked_path,   artifact_path="analysis")
+        mlf.log_artifact(top_concepts_path, artifact_path="../analysis")
+        mlf.log_artifact(all_ranked_path, artifact_path="../analysis")
 
     print("="*70 + "\n")
 
