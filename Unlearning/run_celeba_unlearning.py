@@ -37,16 +37,17 @@ from Unlearning.certified_unlearning import (
 )
 
 # ── CONFIG — all tunable parameters are here ──────────────────────────────────
+attribute = "Attractive"
 CFG = {
     # Paths
-    "probe_path"       : "./train_linear_probe_celeba/outputs/Pale_Skin/binary_probe.pt",
-    "all_concepts_csv" : "./train_linear_probe_celeba/outputs/Pale_Skin/all_concepts_ranked.csv",
+    "probe_path"       : f"./train_linear_probe_celeba/outputs/{attribute}/binary_probe.pt",
+    "all_concepts_csv" : f"./train_linear_probe_celeba/outputs/{attribute}/all_concepts_ranked.csv",
     "train_acts_path"  : "./data/activations_img/celeba/clip_RN50/out/train/sae_activations.pth",
     "celeba_root"      : "./data/celeba",
-    "output_dir"       : "./unlearning/outputs/Pale_Skin",
+    "output_dir"       : f"./unlearning/outputs/{attribute}",
 
     # Dataset
-    "attribute"        : "Pale_Skin",
+    "attribute"        : f"{attribute}",
     "forget_k"         : 100,      # top-K images to forget
     "batch_size"       : 256,
     "device"           : "cuda" if torch.cuda.is_available() else "cpu",
